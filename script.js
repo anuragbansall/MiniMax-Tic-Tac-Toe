@@ -12,8 +12,6 @@ const board = [
 function renderBoard() {
   console.clear();
 
-  let cellNumber = 1;
-
   for (let i = 0; i < 3; i++) {
     let row = "";
 
@@ -23,8 +21,6 @@ function renderBoard() {
       if (j < 2) {
         row += " | ";
       }
-
-      cellNumber++;
     }
 
     console.log(row);
