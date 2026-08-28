@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniMax Tic-Tac-Toe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f0f;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0e0;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+      color: #fff;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: #666;
+      letter-spacing: 0.08em;
+      margin-bottom: 2rem;
+    }
+
+    #status {
+      font-size: 1rem;
+      min-height: 1.5rem;
+      margin-bottom: 1.4rem;
+      color: #aaa;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    #status.win   { color: #4ade80; }
+    #status.lose  { color: #f87171; }
+    #status.draw  { color: #facc15; }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 110px);
+      grid-template-rows: repeat(3, 110px);
+      gap: 6px;
+    }
+
+    .cell {
+      background: #1a1a1a;
+      border: 2px solid #2a2a2a;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #252525;
+      border-color: #444;
+      transform: scale(1.04);
+    }
+
+    .cell.taken { cursor: default; }
+
+    .cell.x { color: #60a5fa; }
+    .cell.o { color: #f472b6; }
+
+    .cell.winning {
+      background: #1e2a1e;
+      border-color: #4ade80;
+    }
+
+    #reset {
+      margin-top: 2rem;
+      padding: 0.55rem 1.6rem;
+      background: transparent;
+      border: 2px solid #333;
+      border-radius: 8px;
+      color: #aaa;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    #reset:hover {
+      border-color: #666;
+      color: #e0e0e0;
+    }
+
+    .legend {
+      margin-top: 1.6rem;
+      font-size: 0.75rem;
+      color: #444;
+      display: flex;
+      gap: 1.4rem;
+    }
+
+    .legend span { display: flex; align-items: center; gap: 0.4rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.x { background: #60a5fa; }
+    .dot.o { background: #f472b6; }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <p class="subtitle">Minimax AI &mdash; you cannot win</p>
+
+  <div id="status">Your turn (O)</div>
+
+  <div id="board">
+    <div class="cell" data-index="0"></div>
+    <div class="cell" data-index="1"></div>
+    <div class="cell" data-index="2"></div>
+    <div class="cell" data-index="3"></div>
+    <div class="cell" data-index="4"></div>
+    <div class="cell" data-index="5"></div>
+    <div class="cell" data-index="6"></div>
+    <div class="cell" data-index="7"></div>
+    <div class="cell" data-index="8"></div>
+  </div>
+
+  <button id="reset">New Game</button>
+
+  <div class="legend">
+    <span><span class="dot x"></span> AI (X)</span>
+    <span><span class="dot o"></span> You (O)</span>
+  </div>
+
+  <script>
+    // ── State ───────────────────────────────────────────────────────────────
+    // X = AI, O = Human  (same as CLI)
+    let board = ["", "", "", "", "", "", "", "", ""];
+    let gameOver = false;
+
+    // ── DOM ─────────────────────────────────────────────────────────────────
+    const cells = document.querySelectorAll(".cell");
+    const statusEl = document.getElementById("status");
+    const resetBtn = document.getElementById("reset");
+
+    // ── Core logic (identical to script.js, adapted to flat array) ──────────
+    function checkWinner(b) {
+      const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+        [0, 4, 8], [2, 4, 6],             // diagonals
+      ];
+
+      for (const [a, c, d] of lines) {
+        if (b[a] && b[a] === b[c] && b[c] === b[d]) {
+          return { winner: b[a], line: [a, c, d] };
+        }
+      }
+      return null;
+    }
+
+    function isBoardFull(b) {
+      return b.every(cell => cell !== "");
+    }
+
+    function minimax(b, depth, isMaximizing) {
+      const result = checkWinner(b);
+      if (result) {
+        if (result.winner === "X") return 10 - depth;
+        if (result.winner === "O") return depth - 10;
+      }
+      if (isBoardFull(b)) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i] === "") {
+            b[i] = "X";
+            bestScore = Math.max(bestScore, minimax(b, depth + 1, false));
+            b[i] = "";
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i] === "") {
+            b[i] = "O";
+            bestScore = Math.min(bestScore, minimax(b, depth + 1, true));
+            b[i] = "";
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    function getBestAIMove(b) {
+      let bestScore = -Infinity;
+      let bestMove = -1;
+      for (let i = 0; i < 9; i++) {
+        if (b[i] === "") {
+          b[i] = "X";
+          const score = minimax(b, 0, false);
+          b[i] = "";
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = i;
+          }
+        }
+      }
+      return bestMove;
+    }
+
+    // ── Rendering ────────────────────────────────────────────────────────────
+    function renderBoard() {
+      cells.forEach((cell, i) => {
+        cell.textContent = board[i];
+        cell.className = "cell" + (board[i] ? ` ${board[i].toLowerCase()} taken` : "");
+      });
+    }
+
+    function highlightWinningLine(line) {
+      line.forEach(i => cells[i].classList.add("winning"));
+    }
+
+    function setStatus(text, cls = "") {
+      statusEl.textContent = text;
+      statusEl.className = cls;
+    }
+
+    // ── Game flow ─────────────────────────────────────────────────────────────
+    function handleCellClick(index) {
+      if (gameOver || board[index] !== "") return;
+
+      // Human move (O)
+      board[index] = "O";
+      renderBoard();
+
+      const afterHuman = checkWinner(board);
+      if (afterHuman) {
+        highlightWinningLine(afterHuman.line);
+        setStatus("You win! (somehow...)", "win");
+        gameOver = true;
+        return;
+      }
+      if (isBoardFull(board)) {
+        setStatus("It's a draw!", "draw");
+        gameOver = true;
+        return;
+      }
+
+      setStatus("AI is thinking...");
+
+      // Small timeout so the UI paints before the AI computation
+      setTimeout(() => {
+        const aiMove = getBestAIMove(board);
+        board[aiMove] = "X";
+        renderBoard();
+
+        const afterAI = checkWinner(board);
+        if (afterAI) {
+          highlightWinningLine(afterAI.line);
+          setStatus("AI wins!", "lose");
+          gameOver = true;
+          return;
+        }
+        if (isBoardFull(board)) {
+          setStatus("It's a draw!", "draw");
+          gameOver = true;
+          return;
+        }
+
+        setStatus("Your turn (O)");
+      }, 120);
+    }
+
+    function resetGame() {
+      board = ["", "", "", "", "", "", "", "", ""];
+      gameOver = false;
+      renderBoard();
+      setStatus("Your turn (O)");
+    }
+
+    // ── Event listeners ───────────────────────────────────────────────────────
+    cells.forEach(cell => {
+      cell.addEventListener("click", () => handleCellClick(Number(cell.dataset.index)));
+    });
+
+    resetBtn.addEventListener("click", resetGame);
+  </script>
+</body>
+</html>
